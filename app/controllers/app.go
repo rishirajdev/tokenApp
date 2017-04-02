@@ -16,22 +16,20 @@ type App struct {
 
 func (c App) Index() revel.Result {
 	token := make(map[string]interface{})
-	id := c.Session["username"]
-	
-	if err := cache.Get("token_"+id, &token); err != nil {
+	//id := c.Session["username"]
+	fmt.Println(c.Request.Header.Get("Authorization"))
+	if err := cache.Get(c.Request.Header.Get("Authorization"), &token); err != nil {
 		
-        fmt.Println(err)
-		fmt.Println(cache.Get("token_"+id, &token))
-	}else if token["access_token"] != c.Session["token"]{
+        fmt.Println("Token Expired")
+		return c.Redirect(App.Notfound)
 		
-		return c.Render("Token Expire")
 	}
-	
+	fmt.Println(token)
 	/*if c.Session["username"] != "Rishiraj"{
 		fmt.Println("Inside IF 2")
 		
 	}*/
-	return c.Render()
+	return c.Render("Success")
 }
 
 func (c App) Authentication() revel.Result {
@@ -42,6 +40,7 @@ func (c App) Authentication() revel.Result {
 	}
 
 	fmt.Println("c.Request.Form : ", c.Request.Form)
+	fmt.Println(userlog.Username)
 
 	data := make(map[string]interface{})
 	if userlog.Username == "Rishiraj" {
@@ -52,13 +51,14 @@ func (c App) Authentication() revel.Result {
 
 				fmt.Println(err)
 			}
-			c.Session["username"] = userlog.Username
-			c.Session["token"] = token
+			//c.Session["username"] = userlog.Username
+			//c.Session["token"] = token
 			//c.Session.SetDefaultExpiration()
-			c.Session.SetNoExpiration()
-			data["access_token"] = token
-			go cache.Set("token_"+userlog.Username, data, 20*time.Second)
-			fmt.Println(1*time.Second)
+			//c.Session.SetNoExpiration()
+			data["username"] = userlog.Username
+			data["access_token"]="Bearer "+token
+			go cache.Set("Bearer "+token, data, 20*time.Second)
+			fmt.Println(20*time.Second)
 
 		}
 
@@ -72,7 +72,7 @@ func (c App) Authentication() revel.Result {
 
 func (c App) Notfound() revel.Result{
 	
-	return c.Render("404 session expired")
+	return c.RenderText("404 session expired")
 }
 
 func GenerateRandomBytes(n int) ([]byte, error) {
